@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { AppState, AppStateStatus, StyleSheet, Text, View, Image, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, setAudioModeAsync } from 'expo-audio';
+import { Logo } from './components/logo';
 
 const API = `https://api.slingacademy.com/v1/sample-data/photos?limit=200`
 
@@ -31,7 +32,7 @@ function ImageCard({ image }: { image: IPhotos }) {
       <Text>{image.user}</Text>
       <Text>{image.title}</Text>
       <Text>{image.description}</Text>
-    </View >
+    </View>
   )
 }
 
@@ -48,45 +49,32 @@ function ImageList({ images }: { images: IPhotos[] }) {
   )
 }
 
-
 export default function App() {
   const [images, setImages] = useState<IPhotos[]>([])
   const [loading, setLoading] = useState<boolean>(true)
-  const soundRef = useRef<Audio.Sound | null>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
-
-  async function setupAndPlay(): Promise<void> {
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-        shouldDuckAndroid: true,
-      });
-
-      const { sound } = await Audio.Sound.createAsync(
-        require('./assets/sounds/audio.mp3'),
-        {
-          shouldPlay: true,
-          isLooping: false,
-          volume: 1.0,
-        }
-      );
-
-      soundRef.current = sound;
-    } catch (error) {
-      console.error('Error al reproducir audio:', error);
-    }
-  }
+  const player = useAudioPlayer(require('./assets/sounds/audio.mp3'));
 
   useEffect(() => {
-    setupAndPlay();
+    const setup = async () => {
+      try {
+        await setAudioModeAsync({
+          playsInSilentMode: true,
+        });
+        player.play();
+      } catch (error) {
+      }
+    }
+
+    setup();
+
     const subscription = AppState.addEventListener(
       'change',
-      async (nextState: AppStateStatus) => {
+      (nextState: AppStateStatus) => {
         if (appState.current === 'active' && nextState === 'background') {
-          await soundRef.current?.pauseAsync();
+          player.pause();
         } else if (appState.current === 'background' && nextState === 'active') {
-          await soundRef.current?.playAsync();
+          player.play();
         }
         appState.current = nextState;
       }
@@ -94,10 +82,8 @@ export default function App() {
 
     return () => {
       subscription.remove();
-      soundRef.current?.unloadAsync();
     };
   }, []);
-
 
   useEffect(() => {
     const getImages = async () => {
@@ -106,7 +92,6 @@ export default function App() {
         setImages(data)
       } catch (error) {
         setLoading(true)
-        console.error(error)
       } finally {
         await new Promise(re => setTimeout(re, 5000))
         setLoading(false)
@@ -121,9 +106,7 @@ export default function App() {
         <StatusBar style="light" />
         {loading ? (
           <View style={styles.loadingContainer}>
-            <Image
-              source={require('./assets/loading/bd3c6ca5-e1b0-4662-a33c-546c35df26e0.png')}
-              style={{ width: 300, height: 300 }} />
+            <Logo />
             <ActivityIndicator color={"#fff"} size={"large"} />
             <Text>Loading...</Text>
           </View>
@@ -131,17 +114,11 @@ export default function App() {
           <ImageList images={images} />
         )}
       </SafeAreaView>
-    </SafeAreaProvider >
+    </SafeAreaProvider>
   )
 }
 
 const styles = StyleSheet.create({
-  loading: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   card: {
     backgroundColor: '#fff',
     alignItems: 'center',
@@ -166,5 +143,3 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 });
-
-
