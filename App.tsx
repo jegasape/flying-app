@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link } from 'expo-router'
 import { StatusBar } from 'expo-status-bar';
 import { AppState, AppStateStatus, StyleSheet, Text, View, Image, FlatList, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -104,6 +105,9 @@ export default function App() {
     <SafeAreaProvider style={{ backgroundColor: '#000' }}>
       <SafeAreaView style={{ flex: 1 }}>
         <StatusBar style="light" />
+        <Link href="/about" style={{ color: "#fff", fontSize: 50, fontWeight: 'bold', marginTop: 50 }}>
+          Ir al about
+        </Link>
         {loading ? (
           <View style={styles.loadingContainer}>
             <Logo />
